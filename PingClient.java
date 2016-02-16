@@ -1,9 +1,27 @@
+// PingClient.java
+// Author: Tyler Petrochko
+// Class: CS 433 with Yang R. Yang
+//
+//
+// Spec:
+//
+// 		The output of your client should report the minimum, 
+// 		maximum, and average RTTs. It should also report the loss rate.
+//
+// Usage:
+//
+// 		java PingClient host port passwd
+//
+
 import java.net.*;
 import java.io.*;
 import java.nio.*;
 import java.util.*;
 
+
 public class PingClient {
+	static final int NUM_PINGS = 10;
+	
 	private static InetAddress host;
 	private static int port;
 	private static String passwd;
@@ -11,7 +29,6 @@ public class PingClient {
 	public static void main (String [] args){
 		if (args.length != 3){
 			System.out.println("Usage: java PingClient host port passwd");
-
 			return;
 		}
 		
@@ -26,9 +43,9 @@ public class PingClient {
 			socket.setSoTimeout(1000); // maybe set this lower?
 
 			// Let's make some ping messages
-			byte [][] messages = new byte[10][];
+			byte [][] messages = new byte[NUM_PINGS][];
 			byte [] terminator = (passwd + "\r\n").getBytes("US-ASCII");
-			for (int i = 0; i < 10; i++){
+			for (int i = 0; i < NUM_PINGS; i++){
 				try{
 					ByteBuffer messageBuilder = ByteBuffer
 						.allocate(14 + terminator.length);
@@ -42,6 +59,7 @@ public class PingClient {
 					short sequenceNumber = (short) i;
 					messageBuilder.putShort(sequenceNumber);
 
+					
 					// then eight bytes time
 					long timestamp = System.currentTimeMillis();
 					messageBuilder.putLong(timestamp);
@@ -56,8 +74,14 @@ public class PingClient {
 				}
 			}
 			
+			// Track average, max, min RTT
+			long totalRTT = 0;
+			long minRTT = Long.MAX_VALUE;
+			long maxRTT = Long.MIN_VALUE;
+			int numRTTs = 0;
+			
 			// Send Ping messages
-			for(int i = 0; i < 10; i++){
+			for(int i = 0; i < NUM_PINGS; i++){
 				// Ping request
 				DatagramPacket request = new DatagramPacket(messages[i], 
 						messages[i].length, host, port);
@@ -72,13 +96,40 @@ public class PingClient {
 					socket.send(request);
 					socket.receive(response);
 				}catch (Exception e){
-					System.out.println("One timed out...");	
+					continue;	// Request timed out
 				}
+
+				// Now interpret data
+				ByteBuffer decoder = ByteBuffer.wrap(response.getData());
+
+				// Skip eight-byte PINGECHO
+				decoder.get(new byte[8]);
+
+				// Get sequence and send time
+				short sequence = decoder.getShort();
+				long sendTime = decoder.getLong();
+
+				// TODO we may have to validate sequence, or do something with pass
+				long RTT = System.currentTimeMillis() - sendTime;
+
+				// Update RTT info
+				numRTTs++;
+				totalRTT += RTT;
+				minRTT = Math.min(minRTT, RTT);
+				maxRTT = Math.max(maxRTT, RTT);
 
 				// Debug (print message)
 				String toPrint = new String(response.getData());
-				System.out.println("Received some data: " + toPrint);
+				System.out.println("RTT: " + RTT);
 			}
+
+			double avgRTT = (double) totalRTT / (double) numRTTs;
+			double lossRate = (double) (NUM_PINGS - numRTTs) / (double) NUM_PINGS;
+
+			System.out.println("Average RTT: " + avgRTT);
+			System.out.println("Max RTT: " + maxRTT);
+			System.out.println("Min RTT: " + minRTT);
+			System.out.println("Loss rate: " + lossRate);
 		}catch(Exception e){
 			e.printStackTrace();
 		}

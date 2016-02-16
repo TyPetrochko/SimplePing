@@ -7,4 +7,6 @@ client: PingClient.java
 server: PingServer.java
 	javac PingServer.java
 
-test:
+test: all
+	timeout 10s java PingServer 1025 pass &
+	java PingClient localhost 1025 pass

@@ -49,7 +49,7 @@ public class PingServer
 
 				 // Decide whether to reply, or simulate packet loss.
 				 if (random.nextDouble() < LOSS_RATE) {
-						System.out.println(" Reply not sent.");
+						System.out.println("\tSERVER: Reply not sent.");
 						continue;
 				 }
 
@@ -110,7 +110,7 @@ public class PingServer
 		
 				 socket.send(reply);
 		
-				 System.out.println(" Reply sent.");
+				 System.out.println("\tSERVER: Reply sent.");
 		 } // end of while
 	 } // end of main
 
@@ -148,7 +148,7 @@ public class PingServer
 			String line = br.readLine();
 
 			// Print host address and data received from it.
-			System.out.println("Received from " +         
+			System.out.println("\tSERVER: Received from " +         
 				request.getAddress().getHostAddress() +
 				": " +
 				new String(line) );
