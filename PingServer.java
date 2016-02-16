@@ -10,8 +10,8 @@ import java.util.*;
 		
 public class PingServer
 {
-	 private static final double LOSS_RATE = 0.3;
-	 private static final int AVERAGE_DELAY = 100; // milliseconds
+	 private static double LOSS_RATE = 0.3;
+	 private static int AVERAGE_DELAY = 100; // milliseconds
 
 	 public static void main(String[] args) throws Exception
 	 {
@@ -22,6 +22,16 @@ public class PingServer
 				 return;
 			}
 
+			// Set options
+			for(int i = 2; i < args.length; i += 2){
+				if(args[i].equals("-delay")){
+					AVERAGE_DELAY = Integer.parseInt(args[i + 1]);
+				}else if (args[i].equals("-loss")){
+					LOSS_RATE = Double.parseDouble(args[i + 1]);
+				}
+			}
+
+			// Set port/password
 			int port = Integer.parseInt(args[0]);
 			String passwd = args[1];
 

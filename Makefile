@@ -8,5 +8,5 @@ server: PingServer.java
 	javac PingServer.java
 
 test: all
-	timeout 10s java PingServer 1025 pass &
+	timeout 10s java PingServer 1025 pass -delay 400 -loss .3 &
 	java PingClient localhost 1025 pass
