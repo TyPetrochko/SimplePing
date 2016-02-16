@@ -48,12 +48,12 @@ public class PingClient {
 			passwd = args[2];
 
 			// Set up I/O socket
-			DatagramSocket socket = new DatagramSocket(0);
+			final DatagramSocket socket = new DatagramSocket(0);
 			socket.setSoTimeout(1000); // maybe set this lower?
 
 			// Let's make some ping messages
-			byte [][] messages = new byte[NUM_PINGS][];
-			byte [] terminator = (passwd + "\r\n").getBytes("US-ASCII");
+			final byte [][] messages = new byte[NUM_PINGS][];
+			final byte [] terminator = (passwd + "\r\n").getBytes("US-ASCII");
 			for (int i = 0; i < NUM_PINGS; i++){
 				try{
 					ByteBuffer messageBuilder = ByteBuffer
