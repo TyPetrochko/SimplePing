@@ -100,7 +100,7 @@ public class PingServer
 
 						// Send eight byte time
 						long timestamp = System.currentTimeMillis();
-						messageBuilder.putLong(timestamp);
+						messageBuilder.putLong(sendTime);
 
 						// Then send password and CRLF
 						messageBuilder.put(terminator);
