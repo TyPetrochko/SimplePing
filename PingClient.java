@@ -50,37 +50,6 @@ public class PingClient {
 			// Set up I/O socket
 			final DatagramSocket socket = new DatagramSocket(0);
 			socket.setSoTimeout(1000); // maybe set this lower?
-
-			// Let's make some ping messages
-			final byte [][] messages = new byte[NUM_PINGS][];
-			final byte [] terminator = (passwd + "\r\n").getBytes("US-ASCII");
-			for (int i = 0; i < NUM_PINGS; i++){
-				try{
-					ByteBuffer messageBuilder = ByteBuffer
-						.allocate(14 + terminator.length);
-
-					// first four bytes "ping"
-					String PINGstr = "PING";
-					byte[] PING = PINGstr.getBytes("US-ASCII");
-					messageBuilder.put(PING);
-
-					// then two byte sequence number
-					short sequenceNumber = (short) i;
-					messageBuilder.putShort(sequenceNumber);
-					
-					// then eight bytes time
-					long timestamp = System.currentTimeMillis();
-					messageBuilder.putLong(timestamp);
-
-					// then some number of bytes for password and CRLF
-					messageBuilder.put(terminator);
-					
-					// explicitly store this message as byte array
-					messages[i] = messageBuilder.array();
-				}catch (Exception e){
-					e.printStackTrace();
-				}
-			}
 			
 			// Schedule a new timer-task
 			final Timer t = new Timer();
@@ -100,10 +69,37 @@ public class PingClient {
 						t.cancel();
 						return;
 					}
+					
+					// Build a message to send
+					byte [] data = null;
+					try{
+						byte [] terminator = (passwd + "\r\n").getBytes("US-ASCII");
+						ByteBuffer messageBuilder = ByteBuffer
+							.allocate(14 + terminator.length);
+
+						// first four bytes "ping"
+						String PINGstr = "PING";
+						byte[] PING = PINGstr.getBytes("US-ASCII");
+						messageBuilder.put(PING);
+
+						// then two byte sequence number
+						short sequenceNumber = (short) counter;
+						messageBuilder.putShort(sequenceNumber);
+						
+						// then eight bytes time
+						long timestamp = System.currentTimeMillis();
+						messageBuilder.putLong(timestamp);
+
+						// then some number of bytes for password and CRLF
+						messageBuilder.put(terminator);
+						data = messageBuilder.array();
+					}catch (Exception e){
+						e.printStackTrace();
+					}
 
 					// Make a datagram request
-					DatagramPacket request = new DatagramPacket(messages[counter], 
-							messages[counter].length, host, port);
+					DatagramPacket request = new DatagramPacket(data, 
+							data.length, host, port);
 					PingClient.counter++;
 
 					// Make a response datagram
