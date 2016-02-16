@@ -82,7 +82,6 @@ public class PingClient {
 				}
 			}
 			
-			
 			// Schedule a new timer-task
 			final Timer t = new Timer();
 			t.schedule(new TimerTask(){
