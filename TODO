@@ -1,1 +1,8 @@
-1) Close up all connections
+[3a] DNS allows delegation of the name space hierarchy. Please use the dig tool to manually find out one sequence of name servers to resolve cicada.cs.yale.edu to its IP address. Please capture the sequence of commands and outputs of using dig. In particular, please start with
+ 
+dig +norecurse @a.root-servers.net cicada.cs.yale.edu A
+If multiple name servers are returned, please pick one and continue the manual process. One claims that Yale uses a server from another school as a backup of Yale's name servers. Is this true?
+
+[3b] Please find 3 gmail servers (IP addresses). Please show the command outputs to support your answer.
+
+[3c] Is a server with IP address 173.194.1.1 an authorized mail transfer agent for gmail? Please show the command outputs to support your answer.

@@ -20,8 +20,9 @@ import java.util.*;
 
 
 public class PingClient {
+	static final int TIMEOUT = 1000;
 	static final int NUM_PINGS = 10;
-	
+
 	private static InetAddress host;
 	private static int port;
 	private static String passwd;
@@ -36,30 +37,42 @@ public class PingClient {
 	public static int counter = 0;
 
 	public static void main (String [] args){
+		// Check correct params
 		if (args.length != 3){
 			System.out.println("Usage: java PingClient host port passwd");
 			return;
 		}
 		
+		// Initialize command line args
 		try{
-			// Initialize command line args
 			host = InetAddress.getByName(args[0]);
 			port = Integer.parseInt(args[1]);
 			passwd = args[2];
-
+		}
+		catch (Exception e){
+			e.printStackTrace();
+		}
+		
+		try{
 			// Set up I/O socket
 			final DatagramSocket socket = new DatagramSocket(0);
-			socket.setSoTimeout(1000); // maybe set this lower?
+			socket.setSoTimeout(TIMEOUT); // maybe set this lower?
 			
 			// Schedule a new timer-task
 			final Timer t = new Timer();
 			t.schedule(new TimerTask(){
 				public void run() {
-					// If we've run this task total number of times, print out results
-					if(counter == NUM_PINGS){
+					// Start at 1, not 0
+					PingClient.counter++;
+					// If task has run enough time, print results
+					if(counter > NUM_PINGS){
+
+						// Calculate average round-trip time and loss rate
 						double avgRTT = (double) totalRTT / (double) numRTTs;
 						double lossRate = ((double) (NUM_PINGS - numRTTs) / 
 							(double) NUM_PINGS);
+
+						// Print results
 						System.out.println("Average RTT: " + avgRTT);
 						System.out.println("Max RTT: " + maxRTT);
 						System.out.println("Min RTT: " + minRTT);
@@ -73,24 +86,25 @@ public class PingClient {
 					// Build a message to send
 					byte [] data = null;
 					try{
+						// Calculate length of terminator plus CRLF signal
 						byte [] terminator = (passwd + "\r\n").getBytes("US-ASCII");
 						ByteBuffer messageBuilder = ByteBuffer
 							.allocate(14 + terminator.length);
 
-						// first four bytes "ping"
+						// Four bytes "ping"
 						String PINGstr = "PING";
 						byte[] PING = PINGstr.getBytes("US-ASCII");
 						messageBuilder.put(PING);
 
-						// then two byte sequence number
+						// Two byte sequence number
 						short sequenceNumber = (short) counter;
 						messageBuilder.putShort(sequenceNumber);
 						
-						// then eight bytes time
+						// Eight bytes time
 						long timestamp = System.currentTimeMillis();
 						messageBuilder.putLong(timestamp);
 
-						// then some number of bytes for password and CRLF
+						// Then some number of bytes for password and CRLF
 						messageBuilder.put(terminator);
 						data = messageBuilder.array();
 					}catch (Exception e){
@@ -100,45 +114,68 @@ public class PingClient {
 					// Make a datagram request
 					DatagramPacket request = new DatagramPacket(data, 
 							data.length, host, port);
-					PingClient.counter++;
 
 					// Make a response datagram
 					byte [] receiptData = new byte[1024];
 					DatagramPacket response = new DatagramPacket(receiptData, 
 							receiptData.length);
 
-					// Send and receive
+					// Send request
 					try{
 						socket.send(request);
-						socket.receive(response);
-					}catch (Exception e){
-						return;	// Request timed out
+					} catch(Exception e){
+						e.printStackTrace();
 					}
 
-					// Now interpret data
-					ByteBuffer decoder = ByteBuffer.wrap(response.getData());
+					// Start waiting for a response
+					long startTime = System.currentTimeMillis();
+					while(true){
+						try{
+							socket.receive(response);
+						}catch (Exception e){
+							System.out.println("Socket timed out");
+							return;	// Request timed out
+						}
+						
+						// Has too much time elapsed?
+						long currentTime = System.currentTimeMillis();
+						if(currentTime - startTime > TIMEOUT){
+							System.out.println("Too much time elapsed: " + (currentTime - startTime));
+							return; // Request timed out
+						}
 
-					// Skip eight-byte PINGECHO
-					decoder.get(new byte[8]);
+						// Now interpret data
+						ByteBuffer decoder = ByteBuffer.wrap(response.getData());
 
-					// Get sequence and send time
-					short sequence = decoder.getShort();
-					long sendTime = decoder.getLong();
+						// Skip eight-byte PINGECHO
+						decoder.get(new byte[8]);
 
-					// TODO we may have to validate sequence, or do something with pass
-					long RTT = System.currentTimeMillis() - sendTime;
+						// Get sequence and send time
+						short sequence = decoder.getShort();
+						long sendTime = decoder.getLong();
 
-					// Update RTT info
-					PingClient.numRTTs++;
-					PingClient.totalRTT += RTT;
-					PingClient.minRTT = Math.min(minRTT, RTT);
-					PingClient.maxRTT = Math.max(maxRTT, RTT);
+						// If it's not the right data, keep waiting
+						if(counter != sequence){
+							System.out.println("Received " + sequence + " while waiting for " + counter);
+							continue;
+						}
 
-					// Debug (print message)
-					String toPrint = new String(response.getData());
-					System.out.println("RTT: " + RTT);
+						// Calculate RTT
+						long RTT = currentTime - sendTime;
+
+						// Update RTT info
+						PingClient.numRTTs++;
+						PingClient.totalRTT += RTT;
+						PingClient.minRTT = Math.min(minRTT, RTT);
+						PingClient.maxRTT = Math.max(maxRTT, RTT);
+
+						// Debug (print message)
+						String toPrint = new String(response.getData());
+						System.out.println("RTT for ping " + counter + ": " + RTT);
+						return;
+					}
 				}
-			}, 0, 1000);
+			}, 0, TIMEOUT);
 
 		}catch(Exception e){
 			e.printStackTrace();
